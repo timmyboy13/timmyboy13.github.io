@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SQL Console Part 1 - Structure</title>
+    <!-- Add Prism CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/themes/prism-tomorrow.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/plugins/line-numbers/prism-line-numbers.min.css">
+</head>
+<body>
+    <div class="container">
+        <div class="info-grid">
+            <div class="info-item" onclick="switchTab('sql-tab')">
+                📦 SQL Console
+            </div>
+            <div class="info-item" onclick="switchTab('csv-upload-tab')">
+                👥 CSV Upload
+            </div>
+            <div class="info-item" onclick="switchTab('table-preview-tab')">
+                📊 Table Preview
+            </div>
+        </div>
+    
+        <div id="sql-tab" class="content active">
+            <div class="editor-container">
+                <div class="sql-editor">
+                    <textarea id="sql-input" placeholder="Write your SQL query here..." spellcheck="false"></textarea>
+                    <pre class="line-numbers"><code class="language-sql" id="sql-highlight"></code></pre>
+                </div>
+            </div>
+            <button onclick="runSQL()">Execute Query</button>
+            <button onclick="downloadResults()">Download Results as CSV</button>
+            <div class="loading" id="sql-loading">Executing query...</div>
+            <div class="results" id="sql-result"></div>
+        </div>
+    
+        <div id="csv-upload-tab" class="content">
+            <input type="file" id="csv-file" accept=".csv" multiple />
+            <button onclick="uploadCSV()">Upload CSV Files</button>
+            <div class="loading" id="csv-loading">Processing files...</div>
+            <div class="results" id="csv-result"></div>
+        </div>
+    
+        <div id="table-preview-tab" class="content">
+            <ul id="table-list"></ul>
+            <pre id="table-details"></pre>
+        </div>
+    </div>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.5.0/sql-wasm.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+    <!-- Add Prism JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/components/prism-sql.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/plugins/line-numbers/prism-line-numbers.min.js"></script>
+</body>
+</html>
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SQL Console Part 2 - Styles</title>
+    <style>
+        :root {
+            --primary-purple: #4F46E5;
+            --light-gray: #F3F4F6;
+            --dark-text: #111827;
+        }
+
+        body {
+            margin: 0;
+            padding: 2rem;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background-color: white;
+            color: var(--dark-text);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .info-grid {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .info-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 1rem 1.5rem;
+            background-color: var(--light-gray);
+            border-radius: 0.75rem;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+
+        .info-item:hover {
+            background-color: #E5E7EB;
+        }
+
+        .content {
+            display: none;
+            padding: 1rem 0;
+        }
+
+        .content.active {
+            display: block;
+        }
+
+        .editor-container {
+            margin-bottom: 1.5rem;
+            border: 1px solid #E5E7EB;
+            border-radius: 0.5rem;
+            overflow: hidden;
+            background-color: #1c1e29;
+        }
+
+        .sql-editor {
+            position: relative;
+        }
+
+        .sql-editor textarea {
+            width: 100%;
+            height: 250px;
+            background-color: transparent;
+            border: none;
+            padding: 15px;
+            font-size: 14px;
+            line-height: 21px;
+            font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+            resize: none;
+            box-sizing: border-box;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+            caret-color: #fff;
+            color: transparent;
+            background: transparent;
+        }
+
+        .sql-editor pre {
+            width: 100%;
+            height: 250px;
+            margin: 0;
+            padding: 15px !important;
+            font-size: 14px !important;
+            line-height: 21px !important;
+            font-family: 'Menlo', 'Monaco', 'Courier New', monospace !important;
+            background-color: transparent !important;
+            box-sizing: border-box;
+            pointer-events: none;
+            overflow-y: hidden !important;
+        }
+
+        .sql-editor pre code {
+            font-family: 'Menlo', 'Monaco', 'Courier New', monospace !important;
+        }
+
+        .sql-editor textarea:focus {
+            outline: none;
+        }
+
+        button {
+            background-color: var(--primary-purple);
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.375rem;
+            border: none;
+            font-weight: 500;
+            cursor: pointer;
+            margin-right: 0.75rem;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #4338CA;
+        }
+
+        .results table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: white;
+            margin-top: 1rem;
+            font-size: 14px;
+        }
+
+        .results th {
+            background-color: var(--primary-purple);
+            color: white;
+            text-align: left;
+            padding: 0.75rem 1rem;
+            font-weight: 500;
+        }
+
+        .results td {
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid #E5E7EB;
+        }
+
+        .results tr:nth-child(even) {
+            background-color: var(--light-gray);
+        }
+
+        .results tr:hover {
+            background-color: #E5E7EB;
+        }
+
+        input[type="file"] {
+            padding: 0.75rem;
+            background-color: white;
+            border: 1px solid #E5E7EB;
+            border-radius: 0.375rem;
+            margin-bottom: 1rem;
+            width: 100%;
+            max-width: 400px;
+        }
+
+        #table-list {
+            list-style: none;
+            padding: 0;
+            margin: 0 0 1.5rem 0;
+        }
+
+        #table-list li {
+            padding: 0.75rem 1rem;
+            background-color: var(--light-gray);
+            border-radius: 0.375rem;
+            margin-bottom: 0.5rem;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+
+        #table-list li:hover {
+            background-color: #E5E7EB;
+        }
+
+        #table-details {
+            font-family: monospace;
+            font-size: 14px;
+            white-space: pre-wrap;
+            margin: 0;
+            padding: 1.5rem;
+            background-color: var(--light-gray);
+            border-radius: 0.5rem;
+        }
+
+        .loading {
+            display: none;
+            color: #6B7280;
+            margin: 1rem 0;
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        .error {
+            color: #DC2626;
+            background-color: #FEE2E2;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            margin: 1rem 0;
+        }
+
+        /* Override Prism styles */
+        .line-numbers .line-numbers-rows {
+            border-right: none !important;
+            padding: 15px 0;
+        }
+
+        /* Customize Prism colors */
+        .token.keyword { color: #569cd6; }
+        .token.function { color: #dcdcaa; }
+        .token.string { color: #ce9178; }
+        .token.number { color: #b5cea8; }
+        .token.operator { color: #d4d4d4; }
+    </style>
+</head>
+<body>
+</body>
+</html>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SQL Console Part 3 - Scripts</title>
+</head>
+<body>
+    <script>
+        class SQLConsole {
+            constructor() {
+                this.db = null;
+                this.initialized = false;
+                this.initPromise = this.init();
+                this.setupEditor();
+            }
+
+            setupEditor() {
+                const textarea = document.getElementById('sql-input');
+                const highlightElement = document.getElementById('sql-highlight');
+
+                textarea.addEventListener('input', () => {
+                    const sql = textarea.value;
+                    highlightElement.textContent = sql;
+                    Prism.highlightElement(highlightElement);
+                });
+
+                textarea.addEventListener('scroll', () => {
+                    highlightElement.parentElement.scrollTop = textarea.scrollTop;
+                    highlightElement.parentElement.scrollLeft = textarea.scrollLeft;
+                });
+
+                textarea.addEventListener('keydown', (e) => {
+                    if (e.key === 'Tab') {
+                        e.preventDefault();
+                        const start = textarea.selectionStart;
+                        const end = textarea.selectionEnd;
+                        textarea.value = textarea.value.substring(0, start) + '    ' + textarea.value.substring(end);
+                        textarea.selectionStart = textarea.selectionEnd = start + 4;
+                        textarea.dispatchEvent(new Event('input'));
+                    }
+                });
+            }
+
+            async init() {
+                try {
+                    const SQL = await initSqlJs({
+                        locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.5.0/${file}`
+                    });
+                    this.db = new SQL.Database();
+                    this.initialized = true;
+                    await this.updateTableList();
+                } catch (error) {
+                    console.error('Failed to initialize SQL.js:', error);
+                    this.showError('Error initializing SQL.js: ' + error.message);
+                }
+            }
+
+            async ensureInitialized() {
+                if (!this.initialized) {
+                    await this.initPromise;
+                }
+                return this.initialized;
+            }
+
+            showError(message) {
+                const resultDiv = document.getElementById('sql-result');
+                resultDiv.innerHTML = `<div class="error">Error: ${message}</div>`;
+            }
+
+            showLoading(id, show) {
+                const loading = document.getElementById(id);
+                if (show) {
+                    loading.classList.add('active');
+                } else {
+                    loading.classList.remove('active');
+                }
+            }
+
+            createResultTable(results) {
+                const table = document.createElement('table');
+                
+                const thead = document.createElement('thead');
+                const headerRow = document.createElement('tr');
+                results.columns.forEach(column => {
+                    const th = document.createElement('th');
+                    th.textContent = column;
+                    headerRow.appendChild(th);
+                });
+                thead.appendChild(headerRow);
+                table.appendChild(thead);
+                
+                const tbody = document.createElement('tbody');
+                results.values.forEach(row => {
+                    const tr = document.createElement('tr');
+                    row.forEach(cell => {
+                        const td = document.createElement('td');
+                        td.textContent = cell;
+                        tr.appendChild(td);
+                    });
+                    tbody.appendChild(tr);
+                });
+                table.appendChild(tbody);
+                
+                return table;
+            }
+
+            async runSQL() {
+                if (!await this.ensureInitialized()) return;
+
+                const sql = document.getElementById("sql-input").value;
+                if (!sql.trim()) {
+                    this.showError('Please enter a SQL query');
+                    return;
+                }
+
+                this.showLoading('sql-loading', true);
+                try {
+                    const res = this.db.exec(sql);
+                    const resultDiv = document.getElementById("sql-result");
+                    resultDiv.innerHTML = '';
+                    
+                    if (res[0]) {
+                        const table = this.createResultTable(res[0]);
+                        resultDiv.appendChild(table);
+                    } else {
+                        resultDiv.textContent = "Query executed successfully. No results to display.";
+                    }
+                    await this.updateTableList();
+                } catch (e) {
+                    this.showError(e.message);
+                } finally {
+                    this.showLoading('sql-loading', false);
+                }
+            }
+
+            detectColumnType(values) {
+                let isInteger = true;
+                let isReal = true;
+
+                for (let value of values) {
+                    if (value === null || value === '') continue;
+                    
+                    if (typeof value === 'string') {
+                        const num = Number(value);
+                        if (isNaN(num)) {
+                            return 'TEXT';
+                        }
+                        if (!Number.isInteger(num)) {
+                            isInteger = false;
+                        }
+                    } else if (typeof value === 'number') {
+                        if (!Number.isInteger(value)) {
+                            isInteger = false;
+                        }
+                    } else {
+                        return 'TEXT';
+                    }
+                }
+
+                return isInteger ? 'INTEGER' : 'REAL';
+            }
+
+            async processCSVFile(file) {
+                return new Promise((resolve, reject) => {
+                    Papa.parse(file, {
+                        header: true,
+                        dynamicTyping: true,
+                        skipEmptyLines: true,
+                        complete: async (results) => {
+                            try {
+                                if (!results.data || results.data.length === 0) {
+                                    throw new Error(`CSV file ${file.name} is empty`);
+                                }
+
+                                const columns = Object.keys(results.data[0]);
+                                const tableName = file.name
+                                    .replace(".csv", "")
+                                    .replace(/[^a-zA-Z0-9_]/g, '_');
+
+                                // Detect column types
+                                const columnTypes = {};
+                                columns.forEach(col => {
+                                    const values = results.data.map(row => row[col]);
+                                    columnTypes[col] = this.detectColumnType(values);
+                                });
+
+                                const createTableQuery = `CREATE TABLE IF NOT EXISTS ${tableName} (
+                                    ${columns.map(col => `${col} ${columnTypes[col]}`).join(', ')}
+                                );`;
+
+                                this.db.run(createTableQuery);
+
+                                const BATCH_SIZE = 100;
+                                for (let i = 0; i < results.data.length; i += BATCH_SIZE) {
+                                    const batch = results.data.slice(i, Math.min(i + BATCH_SIZE, results.data.length));
+                                    
+                                    const placeholders = batch.map(() => 
+                                        `(${columns.map(() => '?').join(', ')})`
+                                    ).join(', ');
+
+                                    const insertQuery = `INSERT INTO ${tableName} (${columns.join(', ')}) 
+                                                      VALUES ${placeholders}`;
+
+                                    const flatValues = batch.flatMap(row => 
+                                        columns.map(col => {
+                                            const value = row[col];
+                                            return value === null || value === undefined ? null : value;
+                                        })
+                                    );
+
+                                    this.db.run(insertQuery, flatValues);
+                                }
+
+                                resolve({
+                                    tableName,
+                                    rowCount: results.data.length
+                                });
+                            } catch (e) {
+                                reject(e);
+                            }
+                        },
+                        error: (error) => reject(error)
+                    });
+                });
+            }
+
+            async uploadCSV() {
+                if (!await this.ensureInitialized()) return;
+
+                const fileInput = document.getElementById("csv-file");
+                const files = fileInput.files;
+                
+                if (files.length === 0) {
+                    this.showError('Please select at least one CSV file');
+                    return;
+                }
+
+                this.showLoading('csv-loading', true);
+                const resultDiv = document.getElementById("csv-result");
+                resultDiv.textContent = 'Processing files...';
+
+                try {
+                    const results = [];
+                    for (let file of files) {
+                        const result = await this.processCSVFile(file);
+                        results.push(result);
+                    }
+
+                    resultDiv.innerHTML = results.map(r => 
+                        `Table "${r.tableName}" created successfully with ${r.rowCount} rows.`
+                    ).join('<br>');
+
+                    await this.updateTableList();
+                    fileInput.value = '';
+                } catch (e) {
+                    this.showError(e.message);
+                } finally {
+                    this.showLoading('csv-loading', false);
+                }
+            }
+
+            async downloadResults() {
+                const resultDiv = document.getElementById("sql-result");
+                const table = resultDiv.querySelector('table');
+                if (!table) {
+                    this.showError('No results to download');
+                    return;
+                }
+
+                const headers = Array.from(table.querySelectorAll('th')).map(th => th.textContent);
+                const rows = Array.from(table.querySelectorAll('tbody tr')).map(tr => 
+                    Array.from(tr.querySelectorAll('td')).map(td => td.textContent)
+                );
+
+                const csvContent = [
+                    headers.join(','),
+                    ...rows.map(row => row.join(','))
+                ].join('\n');
+
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement("a");
+                link.setAttribute("href", url);
+                link.setAttribute("download", "query_results.csv");
+                link.style.display = 'none';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+            }
+
+            async updateTableList() {
+                if (!await this.ensureInitialized()) return;
+
+                try {
+                    const res = this.db.exec("SELECT name FROM sqlite_master WHERE type='table';");
+                    const tableList = document.getElementById('table-list');
+                    tableList.innerHTML = '';
+                    
+                    if (res[0]) {
+                        res[0].values.forEach(([tableName]) => {
+                            const li = document.createElement('li');
+                            li.textContent = tableName;
+                            li.onclick = () => this.showTableDetails(tableName);
+                            tableList.appendChild(li);
+                        });
+                    }
+                } catch (error) {
+                    console.error('Failed to update table list:', error);
+                }
+            }
+
+            async showTableDetails(tableName) {
+                if (!await this.ensureInitialized()) return;
+
+                try {
+                    const schema = this.db.exec(`PRAGMA table_info(${tableName});`);
+                    const sample = this.db.exec(`SELECT * FROM ${tableName} LIMIT 1;`);
+                    const count = this.db.exec(`SELECT COUNT(*) FROM ${tableName};`);
+                    
+                    let details = `Table: ${tableName}\n\n`;
+                    
+                    if (count[0]) {
+                        details += `Total rows: ${count[0].values[0][0]}\n\n`;
+                    }
+
+                    details += 'Structure:\n';
+                    if (schema[0]) {
+                        schema[0].values.forEach(col => {
+                            details += `${col[1]} (${col[2]})\n`;
+                        });
+                    }
+                    
+                    if (sample[0]) {
+                        details += '\nSample data:\n';
+                        const columns = sample[0].columns;
+                        const values = sample[0].values[0];
+                        columns.forEach((col, i) => {
+                            details += `${col}: ${values[i]}\n`;
+                        });
+                    }
+                    
+                    document.getElementById('table-details').textContent = details;
+                } catch (error) {
+                    document.getElementById('table-details').textContent = 'Error: ' + error.message;
+                }
+            }
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.content').forEach(content => {
+                content.classList.remove('active');
+            });
+            document.getElementById(tabId).classList.add('active');
+        }
+
+        // Global function wrappers for HTML onclick handlers
+        function uploadCSV() {
+            window.sqlConsole.uploadCSV();
+        }
+
+        function runSQL() {
+            window.sqlConsole.runSQL();
+        }
+
+        function downloadResults() {
+            window.sqlConsole.downloadResults();
+        }
+
+        // Initialize everything
+        document.addEventListener('DOMContentLoaded', () => {
+            window.sqlConsole = new SQLConsole();
+        });
+    </script>
+</body>
+</html>
