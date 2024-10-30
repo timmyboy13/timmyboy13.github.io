@@ -10,27 +10,38 @@
 </head>
 <body>
     <div class="container">
-        <div class="info-grid">
-            <div class="info-item" onclick="switchTab('sql-tab')">
-                📦 SQL Console
+        <div class="header-container">
+            <div class="info-grid">
+                <div class="info-item" onclick="switchTab('sql-tab')">
+                    📦 SQL Console
+                </div>
+                <div class="info-item" onclick="switchTab('csv-upload-tab')">
+                    👥 CSV Upload
+                </div>
+                <div class="info-item" onclick="switchTab('table-preview-tab')">
+                    📊 Table Preview
+                </div>
             </div>
-            <div class="info-item" onclick="switchTab('csv-upload-tab')">
-                👥 CSV Upload
-            </div>
-            <div class="info-item" onclick="switchTab('table-preview-tab')">
-                📊 Table Preview
+            <div class="logo-container">
+                <img src="https://gifyu.com/image/SOaIy" alt="Console Logo" class="logo-image">
             </div>
         </div>
     
         <div id="sql-tab" class="content active">
             <div class="editor-container">
                 <div class="sql-editor">
-                    <textarea id="sql-input" placeholder="Write your SQL query here..." spellcheck="false"></textarea>
+                    <textarea id="sql-input" placeholder="Write your SQL query here... (Press Cmd/Ctrl + Enter to execute)" spellcheck="false"></textarea>
                     <pre class="line-numbers"><code class="language-sql" id="sql-highlight"></code></pre>
                 </div>
             </div>
-            <button onclick="runSQL()">Execute Query</button>
-            <button onclick="downloadResults()">Download Results as CSV</button>
+            <div class="button-group">
+                <button onclick="runSQL()" class="primary-button">Execute Query 🤖</button>
+                <button onclick="downloadResults()" class="secondary-button">Download Results as CSV</button>
+                <div class="copy-container">
+                    <button onclick="copyResults()" class="secondary-button">Copy Results 📄</button>
+                    <span id="copy-notification" class="copy-notification">Copied!</span>
+                </div>
+            </div>
             <div class="loading" id="sql-loading">Executing query...</div>
             <div class="results" id="sql-result"></div>
         </div>
@@ -43,8 +54,25 @@
         </div>
     
         <div id="table-preview-tab" class="content">
+            <div class="table-header">
+                <h2>Database Tables</h2>
+                <div class="copy-container">
+                    <button onclick="copyTableName()" class="copy-button">Copy Table Name</button>
+                    <span id="table-copy-notification" class="copy-notification">Copied!</span>
+                </div>
+            </div>
             <ul id="table-list"></ul>
-            <pre id="table-details"></pre>
+            <div id="row-count" class="row-count"></div>
+            <table class="table-info">
+                <thead>
+                    <tr>
+                        <th>Name of the column</th>
+                        <th>Data type</th>
+                        <th>Sample Data</th>
+                    </tr>
+                </thead>
+                <tbody id="table-details"></tbody>
+            </table>
         </div>
     </div>
     
@@ -57,7 +85,6 @@
 </body>
 </html>
 
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -67,6 +94,7 @@
     <style>
         :root {
             --primary-purple: #4F46E5;
+            --secondary-gray: #4A5568;
             --light-gray: #F3F4F6;
             --dark-text: #111827;
         }
@@ -85,11 +113,38 @@
             margin: 0 auto;
         }
 
+        /* New header container styles for GIF */
+        .header-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 2rem;
+        }
+
+        .logo-container {
+            width: 633px;
+            height: 106px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: #ffffff;
+            border-radius: 0.5rem;
+            overflow: hidden;
+        }
+
+        .logo-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
         .info-grid {
             display: flex;
             gap: 1rem;
             margin-bottom: 2rem;
             flex-wrap: wrap;
+            flex: 1;
+            margin-right: 2rem;
         }
 
         .info-item {
@@ -171,20 +226,72 @@
             outline: none;
         }
 
+        .button-group {
+            display: flex;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+            align-items: center;
+            position: relative;
+        }
+
         button {
-            background-color: var(--primary-purple);
-            color: white;
             padding: 0.75rem 1.5rem;
             border-radius: 0.375rem;
             border: none;
             font-weight: 500;
             cursor: pointer;
-            margin-right: 0.75rem;
             transition: background-color 0.3s ease;
+            font-size: 0.875rem;
         }
 
-        button:hover {
+        .primary-button {
+            background-color: var(--primary-purple);
+            color: white;
+        }
+
+        .primary-button:hover {
             background-color: #4338CA;
+        }
+
+        .secondary-button {
+            background-color: var(--secondary-gray);
+            color: white;
+        }
+
+        .secondary-button:hover {
+            background-color: #2D3748;
+        }
+
+        .copy-button {
+            background-color: var(--primary-purple);
+            color: white;
+        }
+
+        .copy-button:hover {
+            background-color: #4338CA;
+        }
+
+        .copy-container {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .copy-notification {
+            position: absolute;
+            background-color: #10B981;
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 0.25rem;
+            font-size: 0.875rem;
+            right: -70px;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+            pointer-events: none;
+        }
+
+        .copy-notification.show {
+            opacity: 1;
         }
 
         .results table {
@@ -245,14 +352,55 @@
             background-color: #E5E7EB;
         }
 
-        #table-details {
-            font-family: monospace;
-            font-size: 14px;
-            white-space: pre-wrap;
+        .table-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .table-header h2 {
             margin: 0;
-            padding: 1.5rem;
-            background-color: var(--light-gray);
+            font-size: 1.5rem;
+            color: var(--dark-text);
+        }
+
+        .row-count {
+            font-size: 0.875rem;
+            color: var(--secondary-gray);
+            margin-bottom: 1rem;
+            font-weight: 500;
+        }
+
+        .table-info {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+            background-color: white;
             border-radius: 0.5rem;
+            overflow: hidden;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+        }
+
+        .table-info th {
+            background-color: var(--primary-purple);
+            color: white;
+            text-align: left;
+            padding: 0.75rem 1rem;
+            font-weight: 500;
+        }
+
+        .table-info td {
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid #E5E7EB;
+        }
+
+        .table-info tr:nth-child(even) {
+            background-color: var(--light-gray);
+        }
+
+        .table-info tr:hover {
+            background-color: #E5E7EB;
         }
 
         .loading {
@@ -291,6 +439,7 @@
 </body>
 </html>
 
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -306,6 +455,20 @@
                 this.initialized = false;
                 this.initPromise = this.init();
                 this.setupEditor();
+                this.currentTableName = null;
+                this.setupKeyboardShortcuts();
+            }
+
+            setupKeyboardShortcuts() {
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                        const activeElement = document.activeElement;
+                        if (activeElement.id === 'sql-input') {
+                            e.preventDefault();
+                            this.runSQL();
+                        }
+                    }
+                });
             }
 
             setupEditor() {
@@ -368,6 +531,14 @@
                 } else {
                     loading.classList.remove('active');
                 }
+            }
+
+            showCopyNotification(elementId) {
+                const notification = document.getElementById(elementId);
+                notification.classList.add('show');
+                setTimeout(() => {
+                    notification.classList.remove('show');
+                }, 2000);
             }
 
             createResultTable(results) {
@@ -471,7 +642,6 @@
                                     .replace(".csv", "")
                                     .replace(/[^a-zA-Z0-9_]/g, '_');
 
-                                // Detect column types
                                 const columnTypes = {};
                                 columns.forEach(col => {
                                     const values = results.data.map(row => row[col]);
@@ -611,44 +781,47 @@
                     const schema = this.db.exec(`PRAGMA table_info(${tableName});`);
                     const sample = this.db.exec(`SELECT * FROM ${tableName} LIMIT 1;`);
                     const count = this.db.exec(`SELECT COUNT(*) FROM ${tableName};`);
+                    const rowCount = count[0].values[0][0];
                     
-                    let details = `Table: ${tableName}\n\n`;
+                    // Update row count display
+                    const rowCountDiv = document.getElementById('row-count');
+                    rowCountDiv.textContent = `Total rows: ${rowCount}`;
                     
-                    if (count[0]) {
-                        details += `Total rows: ${count[0].values[0][0]}\n\n`;
-                    }
-
-                    details += 'Structure:\n';
-                    if (schema[0]) {
-                        schema[0].values.forEach(col => {
-                            details += `${col[1]} (${col[2]})\n`;
+                    const tableDetails = document.getElementById('table-details');
+                    tableDetails.innerHTML = '';
+                    
+                    if (schema[0] && sample[0]) {
+                        const columns = schema[0].values;
+                        const sampleData = sample[0].values[0];
+                        
+                        columns.forEach((col, index) => {
+                            const tr = document.createElement('tr');
+                            tr.innerHTML = `
+                                <td>${col[1]}</td>
+                                <td>${col[2]}</td>
+                                <td>${sampleData[index] ?? 'NULL'}</td>
+                            `;
+                            tableDetails.appendChild(tr);
                         });
                     }
                     
-                    if (sample[0]) {
-                        details += '\nSample data:\n';
-                        const columns = sample[0].columns;
-                        const values = sample[0].values[0];
-                        columns.forEach((col, i) => {
-                            details += `${col}: ${values[i]}\n`;
-                        });
-                    }
-                    
-                    document.getElementById('table-details').textContent = details;
+                    this.currentTableName = tableName;
                 } catch (error) {
-                    document.getElementById('table-details').textContent = 'Error: ' + error.message;
+                    const tableDetails = document.getElementById('table-details');
+                    tableDetails.innerHTML = 
+                        `<tr><td colspan="3" class="error">Error: ${error.message}</td></tr>`;
                 }
             }
         }
 
+        // Global function wrappers for HTML onclick handlers
         function switchTab(tabId) {
-            document.querySelectorAll('.content').forEach(content => {
-                content.classList.remove('active');
+            document.querySelectorAll('.content').forEach(tab => {
+                tab.classList.remove('active');
             });
             document.getElementById(tabId).classList.add('active');
         }
 
-        // Global function wrappers for HTML onclick handlers
         function uploadCSV() {
             window.sqlConsole.uploadCSV();
         }
@@ -661,6 +834,40 @@
             window.sqlConsole.downloadResults();
         }
 
+        function copyResults() {
+            const resultDiv = document.getElementById('sql-result');
+            const table = resultDiv.querySelector('table');
+            
+            if (!table) return;
+
+            let text = '';
+            
+            // Get headers
+            const headers = Array.from(table.querySelectorAll('th'))
+                .map(th => th.textContent);
+            text += headers.join('\t') + '\n';
+            
+            // Get data rows
+            const rows = Array.from(table.querySelectorAll('tbody tr'));
+            rows.forEach(row => {
+                const cells = Array.from(row.querySelectorAll('td'))
+                    .map(td => td.textContent);
+                text += cells.join('\t') + '\n';
+            });
+
+            navigator.clipboard.writeText(text)
+                .then(() => window.sqlConsole.showCopyNotification('copy-notification'))
+                .catch(err => console.error('Failed to copy results:', err));
+        }
+
+        function copyTableName() {
+            if (window.sqlConsole.currentTableName) {
+                navigator.clipboard.writeText(window.sqlConsole.currentTableName)
+                    .then(() => window.sqlConsole.showCopyNotification('table-copy-notification'))
+                    .catch(err => console.error('Failed to copy table name:', err));
+            }
+        }
+
         // Initialize everything
         document.addEventListener('DOMContentLoaded', () => {
             window.sqlConsole = new SQLConsole();
@@ -668,3 +875,4 @@
     </script>
 </body>
 </html>
+
